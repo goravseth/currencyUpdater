@@ -1,0 +1,102 @@
+public class CurrencyUpdater {
+    
+    // works for scheduled daily exchange rate update
+    // needs better tests with negative tests and asserts            
+
+    list <CurrencyType> ctl = new list<CurrencyType>([SELECT Id,IsoCode,ConversionRate,LastModifiedDate, DecimalPlaces FROM CurrencyType WHERE IsActive = TRUE AND IsCorporate = FALSE]);
+    map <string, CurrencyType> ctMap = new map<String, CurrencyType>();
+  string appId;
+    
+    public CurrencyUpdater () {
+        API_Key__mdt appKey = [SELECT Value__c FROM API_Key__mdt WHERE Label = 'OER'];
+        this.appId = appKey.value__c;
+         
+        FOR (CurrencyType ct : ctl){
+          ctMap.put(ct.IsoCode,ct);
+        }
+    }
+    
+    public class myJSONClass{
+        public string disclaimer;
+        public string license;
+        public string timestamp;
+        public string base;
+        public map<string,decimal> rates = new map<string,decimal>();
+    }
+        
+    //public class myCTJSONClass{
+       //? - is this used anywhere
+       // public id ctId;               
+    //}
+    
+    public list<CurrencyType> callEndpoint() {
+        // gets current rates from openExchangeRates.com
+        
+        list <currencyType> ctUpdateList = new list <currencyType>();
+        
+          HttpRequest req = new HttpRequest();           
+          req.setMethod('GET');                  
+          req.setEndpoint('callout:OpenExchangeRates/latest.json?base=USD&app_id=' + appId);
+          Http http = new Http();          
+            try {   
+                HTTPResponse res = http.send(req);                                                        
+                string responseText = res.getBody();
+                //system.debug('response body = ' + responseText);
+               
+                myJSONClass obj = (myJSONClass)JSON.deserialize(responseText, myJSONClass.class);   
+               // system.debug(obj.rates.keySet());
+               
+               FOR (currencyType ct : ctl){                   
+                   IF (obj.rates.get(ct.IsoCode) != null ){
+                        ct.ConversionRate = obj.rates.get(ct.IsoCode);
+                        ct.IsActive = TRUE;                                                                      
+                        ctUpdateList.add(ct);                       
+                   }                  
+               }                              
+               //system.debug('ctUpdateListSize = ' + ctUpdateList.size());
+               // cant update currencyType via DML - must use REST API
+               callSFDCAPI(ctUpdateList);                                                  
+            }        
+        
+            catch(Exception e) {
+               utils_logging.writeToLog(e , 'currencyUpdater callout' , 'openexchangerate callout error');
+            }
+                        
+        return ctUpdateList;                       
+    } 
+    
+    public void callSFDCAPI (list<CurrencyType> currList){
+        // https://salesforce.stackexchange.com/questions/13294/patch-request-using-apex-httprequest
+        // https://developer.salesforce.com/docs/atlas.en-us.api_rest.meta/api_rest/dome_composite_junction_object.htm
+        // https://developer.salesforce.com/docs/atlas.en-us.212.0.api_rest.meta/api_rest/resources_composite_sobjects_collections.htm
+        // doesnt work : string inputJson = JSON.serialize(currList);        
+        // manually building the json bc it worked
+        string inputJson = '{"allOrNone":false,"records":[';
+        integer counter = 1;
+        FOR (CurrencyType ct : currList){
+            integer listSize = currList.size();                        
+            inputJson += '{"attributes":{"type":"CurrencyType"},"id":"' + ct.Id + '","conversionRate":' + ct.ConversionRate + '}';
+            IF(counter < listSize){
+                inputJson += ',';
+                counter ++;                
+            }
+        }
+        inputJson += ']}';    
+        system.debug('inputJSON = ' + inputJson);
+        
+        Http h = new Http();
+        HttpRequest req = new HttpRequest();
+        // must use named credential for scheduled job        
+        req.setEndpoint('callout:SFDC' + '/services/data/v42.0/composite/sobjects?_HttpMethod=PATCH');        
+        req.setMethod('POST');
+        req.setHeader('X-HTTP-Method-Override', 'PATCH');
+        req.setBody(inputJSON);
+        req.setHeader('Authorization', 'OAuth ' + UserInfo.getSessionId());
+        req.setHeader('Content-Type', 'application/json');
+        req.setTimeout(60000);        
+        system.debug('request body = ' + req.getBody());
+        HttpResponse res = h.send(req);        
+        system.debug('response body = ' + res.getBody());
+    }        
+    
+}
