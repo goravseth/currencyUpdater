@@ -1,0 +1,10 @@
+global class currencyUpdater_scheduler implements Schedulable{
+    
+    global void execute(SchedulableContext SC){
+    // future method approach currencyUpdater_future.doStuff();
+    id jobID = system.enqueueJob(new queue_CurrencyUpdater());
+    system.debug('job id = ' + jobID);
+
+    }
+
+}
