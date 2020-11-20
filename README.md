@@ -7,7 +7,7 @@ For reasons only known to Steven Tamm, currencyType records cannot be updated vi
 
 As this runs via a scheduled job, I beleive I had issues passing the session ID to the callout.  Worked fine from anonymous apex but not from scheduled job.
 
-I was able to use a connected app + auth provider + named credential (and maybe requires a remote site setting) to authenticate.
+I was able to authenticate using a connected app + auth provider + named credential (and possibly a remote site setting for https://mydomain.salesforce.com).  Detailed steps below.
 
 1. create connected app
 2. create auth provider, type = salesforce, setting the public and private key from the connected app manually (dont use the default values)
