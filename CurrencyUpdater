@@ -7,6 +7,8 @@ public class CurrencyUpdater {
     map <string, CurrencyType> ctMap = new map<String, CurrencyType>();
   string appId;
     
+    
+    // you can just hard code your api key
     public CurrencyUpdater () {
         API_Key__mdt appKey = [SELECT Value__c FROM API_Key__mdt WHERE Label = 'OER'];
         this.appId = appKey.value__c;
