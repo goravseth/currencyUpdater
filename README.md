@@ -17,5 +17,4 @@ I was able to authenticate using a connected app + auth provider + named credent
 
 poof.  currencies, updated daily.  
 
-
-
+note that deploying named credentials and connected apps from sandboxes to prod may change the keys, or do some other nonsense.  at least that is what i recall.
