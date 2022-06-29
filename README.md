@@ -3,6 +3,8 @@ some simple code to automate updating of currencyType records (the spot conversi
 
 This uses a named credential in your org called OpenExchangeRates though all it does is set the callout endpoint, as the auth is via an api key stored in a custom metadata type.
 
+It also references a utility class I use to log errors, so you will need to tweak this but it should be pretty straightforward.
+
 For reasons only known to Steven Tamm, currencyType records cannot be updated via apex - only via the API.  I chose a REST callout, just because I could.
 
 As this runs via a scheduled job, I beleive I had issues passing the session ID to the callout.  Worked fine from anonymous apex but not from scheduled job.
